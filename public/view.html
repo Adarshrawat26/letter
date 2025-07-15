@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Your Letter 💌</title>
+
+  <style>
+    body{
+      background:#fffaf0;
+      font-family:'Georgia',serif;
+      text-align:center;
+      padding:40px;
+      margin:0;
+      overflow-x:hidden;              /* keep hearts inside viewport */
+    }
+
+    h1{margin-top:0;}
+
+    .letter{
+      border:2px dashed #e91e63;
+      padding:2em;
+      border-radius:10px;
+      background:#fff;
+      display:inline-block;
+      max-width:600px;
+      margin-top:20px;
+      white-space:pre-wrap;
+      line-height:1.6;
+      box-sizing:border-box;
+    }
+
+    /* tiny bouncing 💌 icon */
+    .heart-logo{
+      font-size:2em;
+      animation:float 3s ease-in-out infinite;
+    }
+    @keyframes float{
+      0%{transform:translateY(0)}
+      50%{transform:translateY(-10px)}
+      100%{transform:translateY(0)}
+    }
+
+    /* ❤️ floating hearts */
+    .heart-float{
+      position:fixed;
+      bottom:-40px;
+      font-size:24px;
+      color:#f06292;
+      opacity:0.9;
+      animation:rise 6s linear forwards;
+      pointer-events:none;
+    }
+    @keyframes rise{
+      0%  {transform:translateY(0)      scale(1);}
+      80% {opacity:0.8;}
+      100%{transform:translateY(-120vh) scale(1.6); opacity:0;}
+    }
+
+    /* 🔈 / 🔊 button */
+    #musicToggle{
+      position:fixed;
+      right:18px; bottom:18px;
+      background:#e91e63;
+      color:#fff;
+      border:none;
+      border-radius:50%;
+      width:48px;height:48px;
+      font-size:1.3em;
+      cursor:pointer;
+      box-shadow:0 4px 8px rgba(0,0,0,.2);
+      transition:background .3s ease;
+    }
+    #musicToggle:hover{background:#d81b60;}
+  </style>
+</head>
+<body>
+  <div class="heart-logo">💌</div>
+  <h1>Your Love Letter is Here</h1>
+  <div class="letter" id="letterContent">Loading…</div>
+
+  <!-- 🔊 background music (royalty‑free piano loop) -->
+  <audio id="bgm" loop>
+    <source src="https://cdn.jsdelivr.net/gh/beardbear/beats@master/love-piano.mp3" type="audio/mpeg">
+  </audio>
+  <button id="musicToggle">🔈</button>
+
+  <script>
+    /* ---------- 1. fetch and display letter ---------- */
+    const id = location.pathname.split('/').pop();
+    async function load(pass=''){
+      const res = await fetch('/get-letter/'+id,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({passphrase:pass})
+      });
+      if(res.ok){
+        const {message} = await res.json();
+        document.getElementById('letterContent').textContent =
+          message + "\n\n— From someone who loves you 💖";
+      }else if(res.status===401){
+        const userPass = prompt('This letter is locked. Enter the passphrase:');
+        if(userPass!==null) load(userPass);
+        else document.getElementById('letterContent').textContent='Access cancelled.';
+      }else{
+        document.getElementById('letterContent').textContent =
+          "Oops! This letter doesn't exist or has been removed.";
+      }
+    }
+    load();
+
+    /* ---------- 2. floating hearts animation ---------- */
+    function spawnHeart(){
+      const heart = document.createElement('div');
+      heart.className = 'heart-float';
+      heart.textContent = '❤️';
+      heart.style.left = Math.random()*100 + 'vw';
+      document.body.appendChild(heart);
+      setTimeout(()=>heart.remove(), 6000); // clean up after animation
+    }
+    setInterval(spawnHeart, 800); // one heart every 0.8 s
+
+    /* ---------- 3. music toggle ---------- */
+    const audio = document.getElementById('bgm');
+    const btn   = document.getElementById('musicToggle');
+
+    btn.addEventListener('click', () => {
+      if(audio.paused){
+        audio.play().catch(()=>{});     // ignore autoplay blocking warnings
+        btn.textContent = '🔊';
+      }else{
+        audio.pause();
+        btn.textContent = '🔈';
+      }
+    });
+
+    /* polite auto‑play after first user click anywhere */
+    window.addEventListener('click', () => {
+      if(audio.paused){
+        audio.play().then(()=>{ btn.textContent='🔊'; }).catch(()=>{});
+      }
+    }, { once:true });
+  </script>
+</body>
+</html>

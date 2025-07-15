@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Write Her a Letter 💌</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=DM+Serif+Display&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- full‑page centering ---------- */
+    html,body{
+      margin:0;padding:0;height:100%;
+      background:#fffaf0;
+      font-family:'DM Serif Display',serif;
+      display:flex;flex-direction:column;
+      justify-content:center;align-items:center;
+    }
+
+    h1{
+      font-family:'Great Vibes',cursive;
+      font-size:3em;color:#c2185b;margin:0 0 25px 0;
+      animation:fadeIn 1.2s ease-in-out;text-align:center;
+    }
+
+    /* ---------- outer dashed card ---------- */
+    .letter-box{
+      width:clamp(280px,90vw,450px);
+      padding:28px 24px;
+      border:2px dashed #f06292;border-radius:18px;
+      background:#ffffff;
+      box-shadow:0 12px 28px rgba(0,0,0,.08);
+      display:flex;flex-direction:column;gap:22px;
+      animation:float 4s ease-in-out infinite;
+      box-sizing:border-box;
+    }
+
+    /* space out the controls inside the form */
+    form{display:flex;flex-direction:column;gap:18px;}
+
+    /* ---------- textarea ---------- */
+    textarea{
+      width:100%;min-height:200px;resize:vertical;
+      padding:18px 20px;
+      font-family:inherit;font-size:1.05em;line-height:1.5;
+      background:#fff5f8;
+      border:2px solid #f8bbd0;border-radius:12px;
+      box-shadow:inset 0 0 6px #f8bbd0;outline:none;
+      box-sizing:border-box;margin:0;
+    }
+
+    /* ---------- inputs ---------- */
+    input[type="password"],input[type="email"]{
+      width:100%;padding:10px 16px;font-size:1em;
+      background:#fff;border:1px solid #f8bbd0;
+      border-radius:10px;box-sizing:border-box;
+    }
+
+    /* ---------- button ---------- */
+    button{
+      display:block;margin:0 auto;
+      padding:10px 28px;
+      font-size:1em;
+      color:#fff;background:#e91e63;
+      border:none;border-radius:30px;
+      cursor:pointer;transition:background .25s;
+      box-shadow:0 4px 10px rgba(0,0,0,.1);
+    }
+    button:hover{background:#d81b60;}
+
+    #linkResult{text-align:center;color:#6a1b9a;font-size:.95em;}
+
+    /* ---------- animations ---------- */
+    @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-8px)}100%{transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+  <h1>Dear Love,</h1>
+
+  <div class="letter-box">
+    <form id="letterForm">
+      <textarea id="letterInput" placeholder="Write something lovely here… 💖"></textarea>
+      <input  id="passInput"  type="password" placeholder="Passphrase (optional)">
+      <input  id="emailInput" type="email"    placeholder="Send to e‑mail (optional)">
+      <button type="submit">Generate Letter Link ✨</button>
+    </form>
+    <div id="linkResult"></div>
+  </div>
+
+  <!-- 🍬 Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.min.js"></script>
+
+  <!-- 💌 Main logic + confetti trigger -->
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form   = document.getElementById('letterForm');
+    const letter = document.getElementById('letterInput');
+    const pass   = document.getElementById('passInput');
+    const email  = document.getElementById('emailInput');
+    const out    = document.getElementById('linkResult');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const res = await fetch('/create-letter', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({
+          message   : letter.value,
+          passphrase: pass.value,
+          email     : email.value
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        /* Show link */
+        out.innerHTML =
+          `Here’s your letter link 💌:<br><a href="${data.link}" target="_blank">${data.link}</a>`;
+
+        /* Clear form */
+        letter.value = '';
+        pass.value   = '';
+        email.value  = '';
+
+        /* 🎉 Confetti */
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 120,
+            spread       : 70,
+            origin       : { y: 0.6 }
+          });
+        } else {
+          console.warn('Confetti library failed to load.');
+        }
+      } else {
+        alert(data.error || 'Something went wrong');
+      }
+    });
+  });
+  </script>
+</body>
+</html>
