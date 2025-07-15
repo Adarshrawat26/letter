@@ -16,31 +16,32 @@ const PORT = process.env.PORT || 3000;
 const LETTERS_FILE = path.join(__dirname, 'letters.json');
 const LETTER_TTL_HOURS = parseInt(process.env.LETTER_TTL_HOURS || '72', 10);
 
-/* ── Ensure DB file ─────────────────────────────────── */
+/* ── Ensure DB file exists ─────────────────────────── */
 if (!fs.existsSync(LETTERS_FILE)) fs.writeFileSync(LETTERS_FILE, '{}', 'utf8');
 
-/* ── Middleware ─────────────────────────────────────── */
+/* ── Security & middleware ─────────────────────────── */
 app.use(
   helmet({
     contentSecurityPolicy: {
-      useDefaults: true,
       directives: {
-        "script-src": [
+        defaultSrc: ["'self'"],
+        scriptSrc: [
           "'self'",
-          "'unsafe-inline'",          // allows inline <script> in HTML
+          "'unsafe-inline'",          // allow inline <script> blocks
           "https://cdn.jsdelivr.net"  // confetti.min.js CDN
         ],
-        "style-src": [
+        styleSrc: [
           "'self'",
-          "'unsafe-inline'",          // inline <style> blocks
+          "'unsafe-inline'",          // inline <style> tags
           "https://fonts.googleapis.com"
         ],
-        "font-src": [
+        fontSrc: [
           "'self'",
           "https://fonts.gstatic.com"
-        ]
-      }
-    }
+        ],
+        imgSrc: ["'self'", "data:"],   // allow emoji hearts as <img src="data:">
+      },
+    },
   })
 );
 
@@ -48,12 +49,12 @@ app.use(rateLimit({ windowMs: 60 * 60 * 1000, max: 50 }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-/* ── Helpers ────────────────────────────────────────── */
+/* ── Helpers ───────────────────────────────────────── */
 const readLetters = () => JSON.parse(fs.readFileSync(LETTERS_FILE, 'utf8'));
 const saveLetters = (obj) => fs.writeFileSync(LETTERS_FILE, JSON.stringify(obj, null, 2));
 const hash = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-/* ── Routes ─────────────────────────────────────────── */
+/* ── Routes ────────────────────────────────────────── */
 
 // Create a new letter
 app.post('/create-letter', async (req, res) => {
@@ -82,12 +83,12 @@ app.get('/view/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'view.html'));
 });
 
-// Legacy redirect (/letter/:id → /view/:id)
+// Legacy redirect
 app.get('/letter/:id', (req, res) => {
   res.redirect(`/view/${req.params.id}`);
 });
 
-// API: fetch letter JSON
+// Fetch letter JSON
 app.post('/get-letter/:id', (req, res) => {
   const { passphrase = '' } = req.body;
   const db  = readLetters();
@@ -98,9 +99,9 @@ app.post('/get-letter/:id', (req, res) => {
   res.json({ message: rec.msg });
 });
 
-/* ── Email helper ──────────────────────────────────── */
+/* ── Email helper (optional) ───────────────────────── */
 async function sendEmail(to, link, msg) {
-  if (!process.env.SMTP_HOST) return;              // skip if SMTP not set
+  if (!process.env.SMTP_HOST) return;
   const transport = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '465', 10),
